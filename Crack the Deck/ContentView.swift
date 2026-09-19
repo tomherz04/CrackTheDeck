@@ -78,6 +78,7 @@ struct ContentView: View {
                     bestStreak: game.bestStreak,
                     decksBeaten: game.decksBeaten,
                     isDailyMode: game.isDailyMode,
+                    duration: game.lastRunDuration,
                     onPlayAgain: { withAnimation { game.newGame() } }
                 )
             }
@@ -114,7 +115,7 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showDailyResult) {
             if let result = game.dailyResult {
-                DailyResultView(result: result, decksBeaten: game.decksBeaten)
+                DailyResultView(result: result)
             }
         }
         .sheet(isPresented: $showDeckStyles) {
@@ -498,10 +499,10 @@ private struct EndOverlayView: View {
     let bestStreak: Int
     let decksBeaten: Int
     let isDailyMode: Bool
+    let duration: TimeInterval
     let onPlayAgain: () -> Void
 
     @State private var popIn = false
-    @State private var shareFileURL: URL?
     @State private var showShareSheet = false
 
     var body: some View {
@@ -556,12 +557,7 @@ private struct EndOverlayView: View {
 
                     if status == .won {
                         Button {
-                            shareFileURL = renderShareImageFile(
-                                totalCorrect: totalCorrect,
-                                bestStreak: bestStreak,
-                                decksBeaten: decksBeaten
-                            )
-                            showShareSheet = shareFileURL != nil
+                            showShareSheet = true
                         } label: {
                             Label("Share", systemImage: "square.and.arrow.up")
                                 .font(.system(.subheadline, design: .rounded).weight(.semibold))
@@ -587,9 +583,7 @@ private struct EndOverlayView: View {
             }
         }
         .sheet(isPresented: $showShareSheet) {
-            if let shareFileURL {
-                ActivityView(items: [shareMessage, shareFileURL])
-            }
+            ActivityView(items: [shareMessage])
         }
     }
 
@@ -614,10 +608,8 @@ private struct EndOverlayView: View {
     }
 
     private var shareMessage: String {
-        if isDailyMode {
-            return "I beat today's Daily Challenge in Crack the Deck! 🔥 Streak: \(bestStreak) · \(totalCorrect) correct guesses. Can you beat it?"
-        }
-        return "I beat the deck! 🎉 Best streak: \(bestStreak) · \(totalCorrect) correct guesses. Can you beat it?"
+        let seconds = Int(duration.rounded())
+        return "I cracked the deck in \(seconds) seconds and my best streak was \(bestStreak)! \(AppLinks.appStoreURLString)"
     }
 
     private var titleText: String {

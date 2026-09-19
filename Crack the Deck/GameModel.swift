@@ -3,6 +3,11 @@ import SwiftUI
 import UIKit
 
 /// Centralized UserDefaults keys, shared across the model and @AppStorage in the views.
+enum AppLinks {
+    /// TODO: replace with the real App Store URL once the app has a live App Store Connect listing.
+    static let appStoreURLString = "https://apps.apple.com/app/idXXXXXXXXXX"
+}
+
 enum DefaultsKey {
     static let decksBeaten = "decksBeaten"
     static let lifetimeBestStreak = "lifetimeBestStreak"
@@ -199,6 +204,7 @@ final class GameModel: ObservableObject {
     @Published private(set) var dailyResult: DailyResult? = GameModel.loadDailyResult()
     @Published private(set) var selectedDeckStyleID = UserDefaults.standard.string(forKey: DefaultsKey.selectedDeckStyleID) ?? DeckStyle.classic.id
     @Published private(set) var hasWonWithoutOdds = UserDefaults.standard.bool(forKey: DefaultsKey.hasWonWithoutOdds)
+    @Published private(set) var lastRunDuration: TimeInterval = 0
 
     private var runStartDate: Date?
     private var usedOddsThisRun = false
@@ -397,14 +403,16 @@ final class GameModel: ObservableObject {
     }
 
     private func recordDailyResult() {
+        let duration = Date().timeIntervalSince(runStartDate ?? Date())
         let result = DailyResult(
             date: todayString,
             won: status == .won,
             correctGuesses: totalCorrect,
             bestStreak: runBestStreak,
-            duration: Date().timeIntervalSince(runStartDate ?? Date())
+            duration: duration
         )
         dailyResult = result
+        lastRunDuration = duration
         Self.saveDailyResult(result)
     }
 
@@ -422,6 +430,7 @@ final class GameModel: ObservableObject {
 
     private func recordWin() {
         let duration = Date().timeIntervalSince(runStartDate ?? Date())
+        lastRunDuration = duration
         let entry = LeaderboardEntry(
             id: UUID(),
             date: Date(),

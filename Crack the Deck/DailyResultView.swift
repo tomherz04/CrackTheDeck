@@ -3,10 +3,8 @@ import Combine
 
 struct DailyResultView: View {
     let result: DailyResult
-    let decksBeaten: Int
 
     @Environment(\.dismiss) private var dismiss
-    @State private var shareFileURL: URL?
     @State private var showShareSheet = false
     @State private var timeRemaining = ""
 
@@ -48,12 +46,7 @@ struct DailyResultView: View {
                     .padding(.top, 4)
 
                     Button {
-                        shareFileURL = renderShareImageFile(
-                            totalCorrect: result.correctGuesses,
-                            bestStreak: result.bestStreak,
-                            decksBeaten: decksBeaten
-                        )
-                        showShareSheet = shareFileURL != nil
+                        showShareSheet = true
                     } label: {
                         Label("Share Result", systemImage: "square.and.arrow.up")
                             .font(.system(.subheadline, design: .rounded).weight(.semibold))
@@ -80,17 +73,16 @@ struct DailyResultView: View {
         .onReceive(timer) { _ in updateTimeRemaining() }
         .onAppear { updateTimeRemaining() }
         .sheet(isPresented: $showShareSheet) {
-            if let shareFileURL {
-                ActivityView(items: [shareMessage, shareFileURL])
-            }
+            ActivityView(items: [shareMessage])
         }
     }
 
     private var shareMessage: String {
         if result.won {
-            return "I beat today's Daily Challenge in Crack the Deck! 🔥 Streak: \(result.bestStreak) · \(result.correctGuesses) correct guesses in \(formattedDuration(result.duration)). Can you beat it?"
+            let seconds = Int(result.duration.rounded())
+            return "I cracked the deck in \(seconds) seconds and my best streak was \(result.bestStreak)! \(AppLinks.appStoreURLString)"
         }
-        return "Today's Daily Challenge in Crack the Deck got me... 💀 \(result.correctGuesses) correct guesses. Think you can beat it?"
+        return "Today's Daily Challenge in Crack the Deck got me... 💀 \(result.correctGuesses) correct guesses. Think you can beat it? \(AppLinks.appStoreURLString)"
     }
 
     private func statRow(label: String, value: String) -> some View {
