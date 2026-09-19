@@ -85,13 +85,15 @@ struct LeaderboardView: View {
                         .font(.system(.subheadline, design: .rounded).weight(.bold))
                         .foregroundColor(achievement.isUnlocked ? .white : .white.opacity(0.4))
                         .multilineTextAlignment(.center)
+                        .lineLimit(2)
                     Text(achievement.description)
                         .font(.caption2)
                         .foregroundColor(.white.opacity(achievement.isUnlocked ? 0.65 : 0.3))
                         .multilineTextAlignment(.center)
+                        .lineLimit(2)
                 }
                 .padding()
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, minHeight: 176, maxHeight: 176)
                 .background(Color.white.opacity(achievement.isUnlocked ? 0.09 : 0.03))
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)

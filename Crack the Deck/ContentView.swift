@@ -11,6 +11,8 @@ struct ContentView: View {
     @State private var showInstructions = false
     @AppStorage(DefaultsKey.showOdds) private var showOdds = false
     @AppStorage(DefaultsKey.hasSeenInstructions) private var hasSeenInstructions = false
+    @AppStorage(DefaultsKey.dailyReminderEnabled) private var dailyReminderEnabled = false
+    @Environment(\.scenePhase) private var scenePhase
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
 
@@ -37,11 +39,15 @@ struct ContentView: View {
                                             if bestMovePileIndex == i {
                                                 BestMoveBadge()
                                                     .offset(x: 6, y: -6)
+                                                    .accessibilityHidden(true)
                                             }
                                         }
                                 }
                                 .buttonStyle(.plain)
                                 .transition(.scale.combined(with: .opacity))
+                                .accessibilityElement(children: .ignore)
+                                .accessibilityLabel(accessibilityLabel(forPile: i))
+                                .accessibilityAddTraits(game.selectedIndex == i ? .isSelected : [])
                             }
                         }
                         .padding(.horizontal)
@@ -97,7 +103,8 @@ struct ContentView: View {
         .sheet(isPresented: $showSettings) {
             SettingsView(
                 onResetStats: { game.resetStats() },
-                onShowInstructions: { showInstructions = true }
+                onShowInstructions: { showInstructions = true },
+                onDailyReminderChanged: refreshDailyReminder
             )
         }
         .sheet(isPresented: $showInstructions) {
@@ -139,6 +146,12 @@ struct ContentView: View {
                 showInstructions = true
             }
         }
+        .onChange(of: scenePhase) { _, _ in refreshDailyReminder() }
+        .onChange(of: game.hasCompletedDailyToday) { _, _ in refreshDailyReminder() }
+    }
+
+    private func refreshDailyReminder() {
+        NotificationManager.refreshDailyReminder(enabled: dailyReminderEnabled, alreadyCompletedToday: game.hasCompletedDailyToday)
     }
 
     private var oddsBreakdown: (lower: Int, same: Int, higher: Int)? {
@@ -157,6 +170,15 @@ struct ContentView: View {
             Int((Double(sameCount) / total * 100).rounded()),
             Int((Double(higherCount) / total * 100).rounded())
         )
+    }
+
+    /// The single best-odds guess direction for the currently selected pile, used to highlight the matching button.
+    private var bestDirection: GuessDirection? {
+        guard let odds = oddsBreakdown else { return nil }
+        let best = max(odds.lower, odds.same, odds.higher)
+        if odds.lower == best { return .lower }
+        if odds.same == best { return .same }
+        return .higher
     }
 
     /// The live pile with the single best-odds guess available right now, used to highlight it when odds are shown.
@@ -181,6 +203,17 @@ struct ContentView: View {
         return bestIndex
     }
 
+    private func accessibilityLabel(forPile i: Int) -> String {
+        switch game.grid[i] {
+        case .faceUp(let card):
+            var label = "\(card.accessibilityLabel), pile \(i + 1)"
+            if bestMovePileIndex == i { label += ", recommended best move" }
+            return label
+        case .faceDown(let card):
+            return "\(card.accessibilityLabel), pile \(i + 1), out of play"
+        }
+    }
+
     private var header: some View {
         VStack(spacing: 16) {
             HStack {
@@ -189,7 +222,7 @@ struct ContentView: View {
                         .font(.system(.headline, design: .rounded).weight(.bold))
                         .foregroundColor(.white)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.7)
+                        .minimumScaleFactor(0.5)
 
                     if game.isDailyMode {
                         Text("DAILY")
@@ -199,32 +232,49 @@ struct ContentView: View {
                             .padding(.vertical, 3)
                             .background(Color.orange)
                             .clipShape(Capsule())
+                            .fixedSize()
                     }
                 }
 
                 Spacer(minLength: 8)
 
                 HStack(spacing: 7) {
-                    headerIconButton(systemImage: "arrow.clockwise", active: false) {
+                    headerIconButton(systemImage: "arrow.clockwise", active: false, accessibilityLabel: "New Game") {
                         showNewGameConfirm = true
                     }
-                    headerIconButton(systemImage: "calendar", active: game.hasCompletedDailyToday) {
+                    headerIconButton(
+                        systemImage: "calendar",
+                        active: game.hasCompletedDailyToday,
+                        accessibilityLabel: "Daily Challenge",
+                        accessibilityValue: game.hasCompletedDailyToday ? "Completed" : "Not played yet"
+                    ) {
                         if game.hasCompletedDailyToday {
                             showDailyResult = true
                         } else {
                             showDailyStartConfirm = true
                         }
                     }
-                    headerIconButton(systemImage: "percent", active: showOdds) {
+                    headerIconButton(
+                        systemImage: "percent",
+                        active: showOdds,
+                        accessibilityLabel: "Show Odds",
+                        accessibilityValue: showOdds ? "On" : "Off"
+                    ) {
                         showOdds.toggle()
                     }
-                    headerIconButton(systemImage: "square.stack.3d.up.fill", active: false) {
+                    headerIconButton(systemImage: "square.stack.3d.up.fill", active: false, accessibilityLabel: "Card Back Styles") {
                         showDeckStyles = true
                     }
-                    headerIconButton(systemImage: "gearshape.fill", active: false) {
+                    headerIconButton(systemImage: "gearshape.fill", active: false, accessibilityLabel: "Settings") {
                         showSettings = true
                     }
-                    headerIconButton(systemImage: "trophy.fill", active: false, badge: game.decksBeaten) {
+                    headerIconButton(
+                        systemImage: "trophy.fill",
+                        active: false,
+                        badge: game.decksBeaten,
+                        accessibilityLabel: "Leaderboard and Achievements",
+                        accessibilityValue: game.decksBeaten > 0 ? "\(game.decksBeaten) decks beaten" : nil
+                    ) {
                         showLeaderboard = true
                     }
                 }
@@ -241,7 +291,14 @@ struct ContentView: View {
         .padding(.horizontal)
     }
 
-    private func headerIconButton(systemImage: String, active: Bool, badge: Int = 0, action: @escaping () -> Void) -> some View {
+    private func headerIconButton(
+        systemImage: String,
+        active: Bool,
+        badge: Int = 0,
+        accessibilityLabel: String,
+        accessibilityValue: String? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
             ZStack(alignment: .topTrailing) {
                 Image(systemName: systemImage)
@@ -263,6 +320,8 @@ struct ContentView: View {
                 }
             }
         }
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityValue(accessibilityValue ?? "")
     }
 
     private func statBlock(label: String, value: String, hot: Bool = false) -> some View {
@@ -282,17 +341,17 @@ struct ContentView: View {
 
     private var guessButtons: some View {
         HStack(spacing: 14) {
-            guessButton(title: "Lower", oddsPercent: oddsBreakdown?.lower, systemImage: "arrow.down", color: .blue, compact: false) {
+            guessButton(title: "Lower", oddsPercent: oddsBreakdown?.lower, systemImage: "arrow.down", color: .blue, compact: false, isBestMove: bestDirection == .lower) {
                 game.guess(.lower, oddsVisible: showOdds)
             }
             .frame(maxWidth: .infinity)
 
-            guessButton(title: "Same", oddsPercent: oddsBreakdown?.same, systemImage: "equal", color: .purple, compact: true) {
+            guessButton(title: "Same", oddsPercent: oddsBreakdown?.same, systemImage: "equal", color: .purple, compact: true, isBestMove: bestDirection == .same) {
                 game.guess(.same, oddsVisible: showOdds)
             }
             .frame(width: 92)
 
-            guessButton(title: "Higher", oddsPercent: oddsBreakdown?.higher, systemImage: "arrow.up", color: .orange, compact: false) {
+            guessButton(title: "Higher", oddsPercent: oddsBreakdown?.higher, systemImage: "arrow.up", color: .orange, compact: false, isBestMove: bestDirection == .higher) {
                 game.guess(.higher, oddsVisible: showOdds)
             }
             .frame(maxWidth: .infinity)
@@ -301,7 +360,7 @@ struct ContentView: View {
         .padding(.bottom, 30)
     }
 
-    private func guessButton(title: String, oddsPercent: Int?, systemImage: String, color: Color, compact: Bool, action: @escaping () -> Void) -> some View {
+    private func guessButton(title: String, oddsPercent: Int?, systemImage: String, color: Color, compact: Bool, isBestMove: Bool, action: @escaping () -> Void) -> some View {
         Button {
             withAnimation(.spring()) { action() }
         } label: {
@@ -321,8 +380,27 @@ struct ContentView: View {
             .background(color.opacity(game.selectedIndex == nil ? 0.3 : 0.85))
             .foregroundColor(.white)
             .cornerRadius(18)
+            .overlay(alignment: .topTrailing) {
+                if isBestMove {
+                    BestMoveBadge()
+                        .offset(x: 6, y: -6)
+                        .accessibilityHidden(true)
+                }
+            }
         }
         .disabled(game.selectedIndex == nil)
+        .accessibilityLabel(guessAccessibilityLabel(title: title, oddsPercent: oddsPercent, isBestMove: isBestMove))
+    }
+
+    private func guessAccessibilityLabel(title: String, oddsPercent: Int?, isBestMove: Bool) -> String {
+        var label = "Guess \(title)"
+        if let oddsPercent {
+            label += ", \(oddsPercent) percent odds"
+        }
+        if isBestMove {
+            label += ", best odds"
+        }
+        return label
     }
 }
 
@@ -464,13 +542,17 @@ private struct EndOverlayView: View {
                 }
 
                 VStack(spacing: 10) {
-                    Button(isDailyMode ? "Play a Random Game" : "Play Again", action: onPlayAgain)
-                        .font(.system(.body, design: .rounded).weight(.bold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color.white)
-                        .foregroundColor(.black)
-                        .cornerRadius(14)
+                    Button(action: onPlayAgain) {
+                        Text(isDailyMode ? "Play a Random Game" : "Play Again")
+                            .font(.system(.body, design: .rounded).weight(.bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color.white)
+                            .foregroundColor(.black)
+                            .cornerRadius(14)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
 
                     if status == .won {
                         Button {

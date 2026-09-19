@@ -3,11 +3,14 @@ import SwiftUI
 struct SettingsView: View {
     let onResetStats: () -> Void
     let onShowInstructions: () -> Void
+    let onDailyReminderChanged: () -> Void
 
     @Environment(\.dismiss) private var dismiss
     @AppStorage(DefaultsKey.soundEnabled) private var soundEnabled = true
     @AppStorage(DefaultsKey.hapticsEnabled) private var hapticsEnabled = true
+    @AppStorage(DefaultsKey.dailyReminderEnabled) private var dailyReminderEnabled = false
     @State private var showResetConfirm = false
+    @State private var showNotificationDeniedAlert = false
 
     var body: some View {
         NavigationStack {
@@ -21,6 +24,23 @@ struct SettingsView: View {
                         }
                         Toggle(isOn: $hapticsEnabled) {
                             Text("Haptics").foregroundColor(.white)
+                        }
+                        Toggle(isOn: $dailyReminderEnabled) {
+                            Text("Daily Reminder").foregroundColor(.white)
+                        }
+                        .onChange(of: dailyReminderEnabled) { _, enabled in
+                            guard enabled else {
+                                onDailyReminderChanged()
+                                return
+                            }
+                            NotificationManager.requestAuthorizationIfNeeded { granted in
+                                if granted {
+                                    onDailyReminderChanged()
+                                } else {
+                                    dailyReminderEnabled = false
+                                    showNotificationDeniedAlert = true
+                                }
+                            }
                         }
                     }
                     .listRowBackground(Color.white.opacity(0.08))
@@ -62,6 +82,11 @@ struct SettingsView: View {
                 }
             } message: {
                 Text("This clears your decks beaten, leaderboard, and achievement progress. This can't be undone.")
+            }
+            .alert("Notifications Disabled", isPresented: $showNotificationDeniedAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Enable notifications for Crack the Deck in the Settings app to get a daily reminder.")
             }
         }
         .preferredColorScheme(.dark)

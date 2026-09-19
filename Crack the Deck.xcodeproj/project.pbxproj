@@ -17,6 +17,7 @@
 		BEEFBEEFBEEFBEEFBEEF001F /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEFBEEFBEEFBEEFBEEF001E /* LeaderboardView.swift */; };
 		BEEFBEEFBEEFBEEFBEEF0021 /* ShareCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEFBEEFBEEFBEEFBEEF0020 /* ShareCard.swift */; };
 		BEEFBEEFBEEFBEEFBEEF0023 /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEFBEEFBEEFBEEFBEEF0022 /* SoundManager.swift */; };
+		BEEFBEEFBEEFBEEFBEEF003E /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEFBEEFBEEFBEEFBEEF003D /* NotificationManager.swift */; };
 		BEEFBEEFBEEFBEEFBEEF0025 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEFBEEFBEEFBEEFBEEF0024 /* SettingsView.swift */; };
 		BEEFBEEFBEEFBEEFBEEF0027 /* DailyResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEFBEEFBEEFBEEFBEEF0026 /* DailyResultView.swift */; };
 		BEEFBEEFBEEFBEEFBEEF0029 /* DeckStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEFBEEFBEEFBEEFBEEF0028 /* DeckStyle.swift */; };
@@ -48,6 +49,7 @@
 		BEEFBEEFBEEFBEEFBEEF001E /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
 		BEEFBEEFBEEFBEEFBEEF0020 /* ShareCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareCard.swift; sourceTree = "<group>"; };
 		BEEFBEEFBEEFBEEFBEEF0022 /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
+		BEEFBEEFBEEFBEEFBEEF003D /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 		BEEFBEEFBEEFBEEFBEEF0024 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		BEEFBEEFBEEFBEEFBEEF0026 /* DailyResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyResultView.swift; sourceTree = "<group>"; };
 		BEEFBEEFBEEFBEEFBEEF0028 /* DeckStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckStyle.swift; sourceTree = "<group>"; };
@@ -106,6 +108,7 @@
 				BEEFBEEFBEEFBEEFBEEF001E /* LeaderboardView.swift */,
 				BEEFBEEFBEEFBEEFBEEF0020 /* ShareCard.swift */,
 				BEEFBEEFBEEFBEEFBEEF0022 /* SoundManager.swift */,
+				BEEFBEEFBEEFBEEFBEEF003D /* NotificationManager.swift */,
 				BEEFBEEFBEEFBEEFBEEF0024 /* SettingsView.swift */,
 				BEEFBEEFBEEFBEEFBEEF0026 /* DailyResultView.swift */,
 				BEEFBEEFBEEFBEEFBEEF0028 /* DeckStyle.swift */,
@@ -225,6 +228,7 @@
 				BEEFBEEFBEEFBEEFBEEF001F /* LeaderboardView.swift in Sources */,
 				BEEFBEEFBEEFBEEFBEEF0021 /* ShareCard.swift in Sources */,
 				BEEFBEEFBEEFBEEFBEEF0023 /* SoundManager.swift in Sources */,
+				BEEFBEEFBEEFBEEFBEEF003E /* NotificationManager.swift in Sources */,
 				BEEFBEEFBEEFBEEFBEEF0025 /* SettingsView.swift in Sources */,
 				BEEFBEEFBEEFBEEFBEEF0027 /* DailyResultView.swift in Sources */,
 				BEEFBEEFBEEFBEEFBEEF0029 /* DeckStyle.swift in Sources */,

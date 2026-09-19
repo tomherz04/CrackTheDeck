@@ -14,6 +14,7 @@ enum DefaultsKey {
     static let hapticsEnabled = "hapticsEnabled"
     static let showOdds = "showOdds"
     static let hasSeenInstructions = "hasSeenInstructions"
+    static let dailyReminderEnabled = "dailyReminderEnabled"
 }
 
 extension Color {
@@ -28,6 +29,16 @@ enum Suit: String, CaseIterable {
     case spades = "♠"
 
     var isRed: Bool { self == .hearts || self == .diamonds }
+
+    /// Spoken-word form used by VoiceOver, since the symbol itself isn't announced meaningfully.
+    var accessibleName: String {
+        switch self {
+        case .hearts: return "Hearts"
+        case .diamonds: return "Diamonds"
+        case .clubs: return "Clubs"
+        case .spades: return "Spades"
+        }
+    }
 }
 
 struct Card: Identifiable, Equatable {
@@ -43,6 +54,19 @@ struct Card: Identifiable, Equatable {
         case 14: return "A"
         default: return "\(rank)"
         }
+    }
+
+    /// Spoken-word form used by VoiceOver, e.g. "King of Spades".
+    var accessibilityLabel: String {
+        let rankName: String
+        switch rank {
+        case 11: rankName = "Jack"
+        case 12: rankName = "Queen"
+        case 13: rankName = "King"
+        case 14: rankName = "Ace"
+        default: rankName = "\(rank)"
+        }
+        return "\(rankName) of \(suit.accessibleName)"
     }
 }
 
