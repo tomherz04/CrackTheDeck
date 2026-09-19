@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Build and Test
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Resolve simulator destination
+        id: sim
+        run: |
+          DEVICE=$(xcrun simctl list devices available | grep -E "iPhone (1[6-9]|[2-9][0-9])" | head -1 | sed -E 's/^ *([^(]+) \(.*/\1/' | sed -E 's/ +$//')
+          echo "Using simulator: $DEVICE"
+          echo "device=$DEVICE" >> "$GITHUB_OUTPUT"
+
+      - name: Build and run tests
+        run: |
+          xcodebuild test \
+            -project "Crack the Deck.xcodeproj" \
+            -scheme "Crack the Deck" \
+            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.device }}"
