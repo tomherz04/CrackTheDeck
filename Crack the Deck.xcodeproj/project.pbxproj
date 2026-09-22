@@ -25,6 +25,7 @@
 		BEEFBEEFBEEFBEEFBEEF002D /* InstructionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEFBEEFBEEFBEEFBEEF002C /* InstructionsView.swift */; };
 		BEEFBEEFBEEFBEEFBEEF002F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = BEEFBEEFBEEFBEEFBEEF002E /* PrivacyInfo.xcprivacy */; };
 		BEEFBEEFBEEFBEEFBEEF0031 /* GameModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEFBEEFBEEFBEEFBEEF0030 /* GameModelTests.swift */; };
+		BEEFBEEFBEEFBEEFBEEF0040 /* CloudSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEFBEEFBEEFBEEFBEEF003F /* CloudSync.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -58,6 +59,8 @@
 		BEEFBEEFBEEFBEEFBEEF002E /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		BEEFBEEFBEEFBEEFBEEF0030 /* GameModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameModelTests.swift; sourceTree = "<group>"; };
 		BEEFBEEFBEEFBEEFBEEF0032 /* Crack the DeckTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Crack the DeckTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		BEEFBEEFBEEFBEEFBEEF003F /* CloudSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSync.swift; sourceTree = "<group>"; };
+		BEEFBEEFBEEFBEEFBEEF0041 /* Crack the Deck.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Crack the Deck.entitlements"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -116,6 +119,8 @@
 				BEEFBEEFBEEFBEEFBEEF002C /* InstructionsView.swift */,
 				BEEFBEEFBEEFBEEFBEEF0018 /* Assets.xcassets */,
 				BEEFBEEFBEEFBEEFBEEF002E /* PrivacyInfo.xcprivacy */,
+				BEEFBEEFBEEFBEEFBEEF003F /* CloudSync.swift */,
+				BEEFBEEFBEEFBEEFBEEF0041 /* Crack the Deck.entitlements */,
 			);
 			path = "Crack the Deck";
 			sourceTree = "<group>";
@@ -234,6 +239,7 @@
 				BEEFBEEFBEEFBEEFBEEF0029 /* DeckStyle.swift in Sources */,
 				BEEFBEEFBEEFBEEFBEEF002B /* DeckStylesView.swift in Sources */,
 				BEEFBEEFBEEFBEEFBEEF002D /* InstructionsView.swift in Sources */,
+				BEEFBEEFBEEFBEEFBEEF0040 /* CloudSync.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -375,6 +381,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Crack the Deck/Crack the Deck.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -405,6 +412,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Crack the Deck/Crack the Deck.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;

@@ -12,6 +12,11 @@ struct SettingsView: View {
     @State private var showResetConfirm = false
     @State private var showNotificationDeniedAlert = false
     @State private var showInstructions = false
+    @State private var showShareApp = false
+
+    private var shareAppMessage: String {
+        "Check out Crack the Deck! \(AppLinks.appStoreURLString)"
+    }
 
     var body: some View {
         NavigationStack {
@@ -51,6 +56,11 @@ struct SettingsView: View {
                             showInstructions = true
                         } label: {
                             Text("How to Play")
+                        }
+                        Button {
+                            showShareApp = true
+                        } label: {
+                            Text("Share App")
                         }
                     }
                     .listRowBackground(Color.white.opacity(0.08))
@@ -93,6 +103,9 @@ struct SettingsView: View {
                 InstructionsView(isOnboarding: false) {
                     hasSeenInstructions = true
                 }
+            }
+            .sheet(isPresented: $showShareApp) {
+                ActivityView(items: [shareAppMessage])
             }
         }
         .preferredColorScheme(.dark)

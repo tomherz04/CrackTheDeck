@@ -237,7 +237,24 @@ final class GameModel: ObservableObject {
     }
 
     init() {
+        CloudSync.start()
+        reloadSyncedStatsFromDefaults()
+        NotificationCenter.default.addObserver(forName: .cloudStatsDidChange, object: nil, queue: .main) { [weak self] _ in
+            self?.reloadSyncedStatsFromDefaults()
+        }
         newGame()
+    }
+
+    /// Re-reads the stats CloudSync mirrors through iCloud, picking up whatever
+    /// merge it just performed (at launch, or when another device's changes arrive).
+    private func reloadSyncedStatsFromDefaults() {
+        let defaults = UserDefaults.standard
+        decksBeaten = defaults.integer(forKey: DefaultsKey.decksBeaten)
+        gamesPlayed = defaults.integer(forKey: DefaultsKey.gamesPlayed)
+        lifetimeBestStreak = defaults.integer(forKey: DefaultsKey.lifetimeBestStreak)
+        hasWonWithoutOdds = defaults.bool(forKey: DefaultsKey.hasWonWithoutOdds)
+        selectedDeckStyleID = defaults.string(forKey: DefaultsKey.selectedDeckStyleID) ?? DeckStyle.classic.id
+        leaderboard = Self.loadLeaderboard()
     }
 
     func newGame(daily: Bool = false) {
@@ -278,6 +295,7 @@ final class GameModel: ObservableObject {
         else { return }
         selectedDeckStyleID = id
         UserDefaults.standard.set(id, forKey: DefaultsKey.selectedDeckStyleID)
+        CloudSync.pushToCloud()
     }
 
     func selectCell(_ index: Int) {
@@ -323,6 +341,7 @@ final class GameModel: ObservableObject {
             if currentStreak > lifetimeBestStreak {
                 lifetimeBestStreak = currentStreak
                 UserDefaults.standard.set(lifetimeBestStreak, forKey: DefaultsKey.lifetimeBestStreak)
+                CloudSync.pushToCloud()
             }
             lastResult = "Correct!"
             SoundManager.shared.play(.correct)
@@ -370,6 +389,10 @@ final class GameModel: ObservableObject {
             }
         }
 
+        if status != .playing {
+            CloudSync.pushToCloud()
+        }
+
         if isDailyMode, status != .playing {
             recordDailyResult()
         }
@@ -404,9 +427,11 @@ final class GameModel: ObservableObject {
         UserDefaults.standard.removeObject(forKey: DefaultsKey.leaderboard)
         UserDefaults.standard.removeObject(forKey: DefaultsKey.lifetimeBestStreak)
         UserDefaults.standard.removeObject(forKey: DefaultsKey.hasWonWithoutOdds)
+        CloudSync.resetCloud()
         if !DeckStyle.isUnlocked(selectedDeckStyle, decksBeaten: decksBeaten) {
             selectedDeckStyleID = DeckStyle.classic.id
             UserDefaults.standard.set(DeckStyle.classic.id, forKey: DefaultsKey.selectedDeckStyleID)
+            CloudSync.pushToCloud()
         }
     }
 
