@@ -16,9 +16,33 @@ struct ContentView: View {
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
 
+    private var isOnFire: Bool { game.currentStreak >= 10 }
+
+    private var backgroundView: some View {
+        ZStack {
+            Color.appBackground
+            if isOnFire {
+                TimelineView(.animation) { context in
+                    let angle = context.date.timeIntervalSinceReferenceDate
+                        .truncatingRemainder(dividingBy: 4) / 4 * 360
+                    AngularGradient(
+                        colors: [.red, .orange, .yellow, .orange, .red, .purple, .red],
+                        center: .center,
+                        angle: .degrees(angle)
+                    )
+                    .opacity(0.55)
+                }
+                .blendMode(.plusLighter)
+                .transition(.opacity)
+            }
+        }
+        .ignoresSafeArea()
+        .animation(.easeInOut(duration: 0.5), value: isOnFire)
+    }
+
     var body: some View {
         ZStack(alignment: .top) {
-            Color.appBackground.ignoresSafeArea()
+            backgroundView
 
             VStack(spacing: 20) {
                 header
@@ -99,12 +123,11 @@ struct ContentView: View {
             .animation(.spring(response: 0.4, dampingFraction: 0.75), value: game.newlyUnlockedDeckStyle)
         }
         .sheet(isPresented: $showLeaderboard) {
-            LeaderboardView(entries: game.leaderboard, achievements: game.achievements)
+            LeaderboardView(entries: game.leaderboard, achievements: game.achievements, gamesPlayed: game.gamesPlayed)
         }
         .sheet(isPresented: $showSettings) {
             SettingsView(
                 onResetStats: { game.resetStats() },
-                onShowInstructions: { showInstructions = true },
                 onDailyReminderChanged: refreshDailyReminder
             )
         }
@@ -328,7 +351,7 @@ struct ContentView: View {
     private func statBlock(label: String, value: String, hot: Bool = false) -> some View {
         VStack(spacing: 3) {
             HStack(spacing: 4) {
-                if hot { FlameView() }
+                if hot { FlameView(streak: game.currentStreak) }
                 Text(value)
                     .font(.system(.title2, design: .rounded).weight(.bold))
                     .foregroundColor(hot ? .orange : .white)
@@ -424,15 +447,22 @@ private struct BestMoveBadge: View {
 }
 
 private struct FlameView: View {
+    let streak: Int
     @State private var pulse = false
+
+    private var duration: Double {
+        max(0.12, 0.55 - Double(streak - 3) * 0.035)
+    }
 
     var body: some View {
         Text("🔥")
             .font(.system(size: 16))
-            .scaleEffect(pulse ? 1.2 : 0.85)
+            .scaleEffect(pulse ? 1.25 : 0.85)
+            .rotationEffect(.degrees(pulse ? -12 : 12))
             .opacity(pulse ? 1 : 0.7)
-            .animation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true), value: pulse)
+            .animation(.easeInOut(duration: duration).repeatForever(autoreverses: true), value: pulse)
             .onAppear { pulse = true }
+            .onChange(of: streak) { _, _ in pulse.toggle() }
             .transition(.scale.combined(with: .opacity))
     }
 }

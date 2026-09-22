@@ -10,6 +10,7 @@ enum AppLinks {
 
 enum DefaultsKey {
     static let decksBeaten = "decksBeaten"
+    static let gamesPlayed = "gamesPlayed"
     static let lifetimeBestStreak = "lifetimeBestStreak"
     static let selectedDeckStyleID = "selectedDeckStyleID"
     static let hasWonWithoutOdds = "hasWonWithoutOdds"
@@ -195,6 +196,7 @@ final class GameModel: ObservableObject {
     @Published private(set) var isResolving = false
     @Published private(set) var isDealing = false
     @Published private(set) var decksBeaten = UserDefaults.standard.integer(forKey: DefaultsKey.decksBeaten)
+    @Published private(set) var gamesPlayed = UserDefaults.standard.integer(forKey: DefaultsKey.gamesPlayed)
     @Published private(set) var runBestStreak = 0
     @Published private(set) var leaderboard: [LeaderboardEntry] = GameModel.loadLeaderboard()
     @Published private(set) var lifetimeBestStreak = UserDefaults.standard.integer(forKey: DefaultsKey.lifetimeBestStreak)
@@ -339,6 +341,8 @@ final class GameModel: ObservableObject {
             status = .won
             decksBeaten += 1
             UserDefaults.standard.set(decksBeaten, forKey: DefaultsKey.decksBeaten)
+            gamesPlayed += 1
+            UserDefaults.standard.set(gamesPlayed, forKey: DefaultsKey.gamesPlayed)
             recordWin()
             if !usedOddsThisRun && !hasWonWithoutOdds {
                 hasWonWithoutOdds = true
@@ -359,6 +363,8 @@ final class GameModel: ObservableObject {
             }
         } else if !grid.contains(where: { if case .faceUp = $0 { return true }; return false }) {
             status = .lost
+            gamesPlayed += 1
+            UserDefaults.standard.set(gamesPlayed, forKey: DefaultsKey.gamesPlayed)
             if GameSettings.hapticsEnabled {
                 UINotificationFeedbackGenerator().notificationOccurred(.error)
             }
@@ -388,11 +394,13 @@ final class GameModel: ObservableObject {
 
     func resetStats() {
         decksBeaten = 0
+        gamesPlayed = 0
         leaderboard = []
         lifetimeBestStreak = 0
         bestStreak = 0
         hasWonWithoutOdds = false
         UserDefaults.standard.removeObject(forKey: DefaultsKey.decksBeaten)
+        UserDefaults.standard.removeObject(forKey: DefaultsKey.gamesPlayed)
         UserDefaults.standard.removeObject(forKey: DefaultsKey.leaderboard)
         UserDefaults.standard.removeObject(forKey: DefaultsKey.lifetimeBestStreak)
         UserDefaults.standard.removeObject(forKey: DefaultsKey.hasWonWithoutOdds)

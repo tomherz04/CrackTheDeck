@@ -3,6 +3,7 @@ import SwiftUI
 struct LeaderboardView: View {
     let entries: [LeaderboardEntry]
     let achievements: [Achievement]
+    let gamesPlayed: Int
 
     @Environment(\.dismiss) private var dismiss
     @State private var sortMode: SortMode = .streak
@@ -30,6 +31,19 @@ struct LeaderboardView: View {
                 Color.appBackground.ignoresSafeArea()
 
                 VStack(spacing: 16) {
+                    HStack {
+                        Text("GAMES PLAYED")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundColor(.white.opacity(0.5))
+                            .tracking(1.2)
+                        Spacer()
+                        Text("\(gamesPlayed)")
+                            .font(.system(.title3, design: .rounded).weight(.bold))
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 4)
+
                     Picker("Sort", selection: $sortMode) {
                         ForEach(SortMode.allCases, id: \.self) { mode in
                             Text(mode.rawValue).tag(mode)

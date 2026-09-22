@@ -2,15 +2,16 @@ import SwiftUI
 
 struct SettingsView: View {
     let onResetStats: () -> Void
-    let onShowInstructions: () -> Void
     let onDailyReminderChanged: () -> Void
 
     @Environment(\.dismiss) private var dismiss
     @AppStorage(DefaultsKey.soundEnabled) private var soundEnabled = true
     @AppStorage(DefaultsKey.hapticsEnabled) private var hapticsEnabled = true
     @AppStorage(DefaultsKey.dailyReminderEnabled) private var dailyReminderEnabled = false
+    @AppStorage(DefaultsKey.hasSeenInstructions) private var hasSeenInstructions = false
     @State private var showResetConfirm = false
     @State private var showNotificationDeniedAlert = false
+    @State private var showInstructions = false
 
     var body: some View {
         NavigationStack {
@@ -47,7 +48,7 @@ struct SettingsView: View {
 
                     Section {
                         Button {
-                            onShowInstructions()
+                            showInstructions = true
                         } label: {
                             Text("How to Play")
                         }
@@ -87,6 +88,11 @@ struct SettingsView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text("Enable notifications for Crack the Deck in the Settings app to get a daily reminder.")
+            }
+            .sheet(isPresented: $showInstructions) {
+                InstructionsView(isOnboarding: false) {
+                    hasSeenInstructions = true
+                }
             }
         }
         .preferredColorScheme(.dark)
