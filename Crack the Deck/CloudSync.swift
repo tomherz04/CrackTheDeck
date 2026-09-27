@@ -13,6 +13,7 @@ extension Notification.Name {
 /// devices each rack up wins before ever syncing, the higher single count wins rather than
 /// their sum. Acceptable for a casual stat screen; not appropriate for anything that needs
 /// exact counts.
+@MainActor
 enum CloudSync {
     private static let store = NSUbiquitousKeyValueStore.default
     private static var isObserving = false
@@ -25,8 +26,10 @@ enum CloudSync {
             object: store,
             queue: .main
         ) { _ in
-            mergeFromCloud()
-            NotificationCenter.default.post(name: .cloudStatsDidChange, object: nil)
+            Task { @MainActor in
+                mergeFromCloud()
+                NotificationCenter.default.post(name: .cloudStatsDidChange, object: nil)
+            }
         }
         store.synchronize()
         mergeFromCloud()
@@ -54,12 +57,10 @@ enum CloudSync {
         }
 
         var merged = [UUID: LeaderboardEntry]()
-        for entry in decodeLeaderboard(defaults.data(forKey: DefaultsKey.leaderboard)) { merged[entry.id] = entry }
+        for entry in GameModel.loadLeaderboard() { merged[entry.id] = entry }
         for entry in decodeLeaderboard(store.data(forKey: DefaultsKey.leaderboard)) { merged[entry.id] = entry }
         let capped = Array(merged.values.sorted { $0.date > $1.date }.prefix(50))
-        if let data = try? JSONEncoder().encode(capped) {
-            defaults.set(data, forKey: DefaultsKey.leaderboard)
-        }
+        GameModel.saveLeaderboard(capped)
 
         pushToCloud()
     }

@@ -51,7 +51,9 @@ struct CardView: View {
             content
         }
         .aspectRatio(0.7, contentMode: .fit)
+        .compositingGroup()
         .shadow(color: .black.opacity(0.2), radius: 3, y: 2)
+        .drawingGroup()
         .scaleEffect((isSelected ? 1.05 : 1.0) * pulseScale)
         .offset(x: shakeOffset)
         .rotation3DEffect(.degrees(rotation), axis: (x: 0, y: 1, z: 0))

@@ -240,7 +240,9 @@ final class GameModel: ObservableObject {
         CloudSync.start()
         reloadSyncedStatsFromDefaults()
         NotificationCenter.default.addObserver(forName: .cloudStatsDidChange, object: nil, queue: .main) { [weak self] _ in
-            self?.reloadSyncedStatsFromDefaults()
+            Task { @MainActor in
+                self?.reloadSyncedStatsFromDefaults()
+            }
         }
         newGame()
     }
@@ -319,6 +321,7 @@ final class GameModel: ObservableObject {
         let achievementsBefore = Set(achievements.filter(\.isUnlocked).map(\.id))
 
         isResolving = true
+        var syncedStateChanged = false
 
         let drawn = deck.removeFirst()
 
@@ -341,7 +344,7 @@ final class GameModel: ObservableObject {
             if currentStreak > lifetimeBestStreak {
                 lifetimeBestStreak = currentStreak
                 UserDefaults.standard.set(lifetimeBestStreak, forKey: DefaultsKey.lifetimeBestStreak)
-                CloudSync.pushToCloud()
+                syncedStateChanged = true
             }
             lastResult = "Correct!"
             SoundManager.shared.play(.correct)
@@ -360,8 +363,6 @@ final class GameModel: ObservableObject {
             status = .won
             decksBeaten += 1
             UserDefaults.standard.set(decksBeaten, forKey: DefaultsKey.decksBeaten)
-            gamesPlayed += 1
-            UserDefaults.standard.set(gamesPlayed, forKey: DefaultsKey.gamesPlayed)
             recordWin()
             if !usedOddsThisRun && !hasWonWithoutOdds {
                 hasWonWithoutOdds = true
@@ -382,14 +383,18 @@ final class GameModel: ObservableObject {
             }
         } else if !grid.contains(where: { if case .faceUp = $0 { return true }; return false }) {
             status = .lost
-            gamesPlayed += 1
-            UserDefaults.standard.set(gamesPlayed, forKey: DefaultsKey.gamesPlayed)
             if GameSettings.hapticsEnabled {
                 UINotificationFeedbackGenerator().notificationOccurred(.error)
             }
         }
 
         if status != .playing {
+            gamesPlayed += 1
+            UserDefaults.standard.set(gamesPlayed, forKey: DefaultsKey.gamesPlayed)
+            syncedStateChanged = true
+        }
+
+        if syncedStateChanged {
             CloudSync.pushToCloud()
         }
 
@@ -478,14 +483,15 @@ final class GameModel: ObservableObject {
         Self.saveLeaderboard(leaderboard)
     }
 
-    private static func loadLeaderboard() -> [LeaderboardEntry] {
+    /// Also used by CloudSync to decode/encode the leaderboard it mirrors through iCloud.
+    static func loadLeaderboard() -> [LeaderboardEntry] {
         guard let data = UserDefaults.standard.data(forKey: DefaultsKey.leaderboard),
               let entries = try? JSONDecoder().decode([LeaderboardEntry].self, from: data)
         else { return [] }
         return entries
     }
 
-    private static func saveLeaderboard(_ entries: [LeaderboardEntry]) {
+    static func saveLeaderboard(_ entries: [LeaderboardEntry]) {
         guard let data = try? JSONEncoder().encode(entries) else { return }
         UserDefaults.standard.set(data, forKey: DefaultsKey.leaderboard)
     }

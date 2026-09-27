@@ -22,18 +22,8 @@ struct ContentView: View {
         ZStack {
             Color.appBackground
             if isOnFire {
-                TimelineView(.animation) { context in
-                    let angle = context.date.timeIntervalSinceReferenceDate
-                        .truncatingRemainder(dividingBy: 4) / 4 * 360
-                    AngularGradient(
-                        colors: [.red, .orange, .yellow, .orange, .red, .purple, .red],
-                        center: .center,
-                        angle: .degrees(angle)
-                    )
-                    .opacity(0.55)
-                }
-                .blendMode(.plusLighter)
-                .transition(.opacity)
+                FireBackgroundView()
+                    .transition(.opacity)
             }
         }
         .ignoresSafeArea()
@@ -54,13 +44,14 @@ struct ContentView: View {
                             .transition(.opacity)
                     } else {
                         LazyVGrid(columns: columns, spacing: 12) {
+                            let bestPile = bestMovePileIndex
                             ForEach(0..<9, id: \.self) { i in
                                 Button {
                                     withAnimation(.easeInOut(duration: 0.15)) { game.selectCell(i) }
                                 } label: {
                                     CardView(state: game.grid[i], isSelected: game.selectedIndex == i, deckStyle: game.selectedDeckStyle)
                                         .overlay(alignment: .topTrailing) {
-                                            if bestMovePileIndex == i {
+                                            if bestPile == i {
                                                 BestMoveBadge()
                                                     .offset(x: 6, y: -6)
                                                     .accessibilityHidden(true)
@@ -70,7 +61,7 @@ struct ContentView: View {
                                 .buttonStyle(.plain)
                                 .transition(.scale.combined(with: .opacity))
                                 .accessibilityElement(children: .ignore)
-                                .accessibilityLabel(accessibilityLabel(forPile: i))
+                                .accessibilityLabel(accessibilityLabel(forPile: i, bestPile: bestPile))
                                 .accessibilityAddTraits(game.selectedIndex == i ? .isSelected : [])
                             }
                         }
@@ -227,11 +218,11 @@ struct ContentView: View {
         return bestIndex
     }
 
-    private func accessibilityLabel(forPile i: Int) -> String {
+    private func accessibilityLabel(forPile i: Int, bestPile: Int?) -> String {
         switch game.grid[i] {
         case .faceUp(let card):
             var label = "\(card.accessibilityLabel), pile \(i + 1)"
-            if bestMovePileIndex == i { label += ", recommended best move" }
+            if bestPile == i { label += ", recommended best move" }
             return label
         case .faceDown(let card):
             return "\(card.accessibilityLabel), pile \(i + 1), out of play"
@@ -464,6 +455,25 @@ private struct FlameView: View {
             .onAppear { pulse = true }
             .onChange(of: streak) { _, _ in pulse.toggle() }
             .transition(.scale.combined(with: .opacity))
+    }
+}
+
+/// The full-screen flood shown once the streak hits 10. Uses a looping `.rotationEffect`
+/// instead of a `TimelineView` so the gradient itself is computed once and animated by
+/// SwiftUI's animation system, rather than being rebuilt from scratch on every frame.
+private struct FireBackgroundView: View {
+    @State private var rotate = false
+
+    var body: some View {
+        AngularGradient(
+            colors: [.red, .orange, .yellow, .orange, .red, .purple, .red],
+            center: .center
+        )
+        .opacity(0.55)
+        .rotationEffect(.degrees(rotate ? 360 : 0))
+        .animation(.linear(duration: 4).repeatForever(autoreverses: false), value: rotate)
+        .blendMode(.plusLighter)
+        .onAppear { rotate = true }
     }
 }
 
