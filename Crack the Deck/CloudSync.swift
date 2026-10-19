@@ -56,28 +56,38 @@ enum CloudSync {
             defaults.set(cloudStyle, forKey: DefaultsKey.selectedDeckStyleID)
         }
 
+        let local = GameModel.loadLeaderboard()
         var merged = [UUID: LeaderboardEntry]()
-        for entry in GameModel.loadLeaderboard() { merged[entry.id] = entry }
+        for entry in local { merged[entry.id] = entry }
         for entry in decodeLeaderboard(store.data(forKey: DefaultsKey.leaderboard)) { merged[entry.id] = entry }
-        let capped = Array(merged.values.sorted { $0.date > $1.date }.prefix(50))
-        GameModel.saveLeaderboard(capped)
+        // Oldest first, matching GameModel.recordWin, which appends new wins and evicts from the front.
+        let capped = Array(merged.values.sorted { $0.date < $1.date }.suffix(50))
+        if capped != local {
+            GameModel.saveLeaderboard(capped)
+        }
 
         pushToCloud()
     }
 
-    /// Mirrors the current local values up to iCloud so other devices pick them up.
+    /// Mirrors the current local values up to iCloud so other devices pick them up. Only keys whose
+    /// value actually changed are written, since every write is queued for upload to iCloud.
     static func pushToCloud() {
         let defaults = UserDefaults.standard
-        store.set(Int64(defaults.integer(forKey: DefaultsKey.decksBeaten)), forKey: DefaultsKey.decksBeaten)
-        store.set(Int64(defaults.integer(forKey: DefaultsKey.gamesPlayed)), forKey: DefaultsKey.gamesPlayed)
-        store.set(Int64(defaults.integer(forKey: DefaultsKey.lifetimeBestStreak)), forKey: DefaultsKey.lifetimeBestStreak)
-        store.set(defaults.bool(forKey: DefaultsKey.hasWonWithoutOdds), forKey: DefaultsKey.hasWonWithoutOdds)
+        setIfChanged(Int64(defaults.integer(forKey: DefaultsKey.decksBeaten)), forKey: DefaultsKey.decksBeaten)
+        setIfChanged(Int64(defaults.integer(forKey: DefaultsKey.gamesPlayed)), forKey: DefaultsKey.gamesPlayed)
+        setIfChanged(Int64(defaults.integer(forKey: DefaultsKey.lifetimeBestStreak)), forKey: DefaultsKey.lifetimeBestStreak)
+        setIfChanged(defaults.bool(forKey: DefaultsKey.hasWonWithoutOdds), forKey: DefaultsKey.hasWonWithoutOdds)
         if let style = defaults.string(forKey: DefaultsKey.selectedDeckStyleID) {
-            store.set(style, forKey: DefaultsKey.selectedDeckStyleID)
+            setIfChanged(style, forKey: DefaultsKey.selectedDeckStyleID)
         }
         if let data = defaults.data(forKey: DefaultsKey.leaderboard) {
-            store.set(data, forKey: DefaultsKey.leaderboard)
+            setIfChanged(data, forKey: DefaultsKey.leaderboard)
         }
+    }
+
+    private static func setIfChanged<T: Equatable>(_ value: T, forKey key: String) {
+        guard store.object(forKey: key) as? T != value else { return }
+        store.set(value, forKey: key)
     }
 
     /// Clears every synced key, both locally-mirrored and in iCloud, e.g. for "Reset All Stats" —

@@ -1,14 +1,10 @@
 import SwiftUI
-import Combine
 
 struct DailyResultView: View {
     let result: DailyResult
 
     @Environment(\.dismiss) private var dismiss
     @State private var showShareSheet = false
-    @State private var timeRemaining = ""
-
-    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         NavigationStack {
@@ -39,9 +35,12 @@ struct DailyResultView: View {
                             .font(.system(size: 11, weight: .semibold, design: .rounded))
                             .foregroundColor(.white.opacity(0.5))
                             .tracking(1.5)
-                        Text(timeRemaining)
-                            .font(.system(.title3, design: .rounded).weight(.bold).monospacedDigit())
-                            .foregroundColor(.orange)
+                        // Only this text ticks each second, rather than the whole sheet re-rendering.
+                        TimelineView(.periodic(from: .now, by: 1)) { context in
+                            Text(timeRemaining(at: context.date))
+                                .font(.system(.title3, design: .rounded).weight(.bold).monospacedDigit())
+                                .foregroundColor(.orange)
+                        }
                     }
                     .padding(.top, 4)
 
@@ -70,8 +69,6 @@ struct DailyResultView: View {
             }
         }
         .preferredColorScheme(.dark)
-        .onReceive(timer) { _ in updateTimeRemaining() }
-        .onAppear { updateTimeRemaining() }
         .sheet(isPresented: $showShareSheet) {
             ActivityView(items: [shareMessage])
         }
@@ -96,21 +93,18 @@ struct DailyResultView: View {
         }
     }
 
-    private func updateTimeRemaining() {
-        let calendar = Calendar.current
-        let now = Date()
-        guard let tomorrow = calendar.nextDate(
+    private func timeRemaining(at now: Date) -> String {
+        guard let tomorrow = Calendar.current.nextDate(
             after: now,
             matching: DateComponents(hour: 0, minute: 0, second: 0),
             matchingPolicy: .nextTime
         ) else {
-            timeRemaining = "—"
-            return
+            return "—"
         }
         let interval = max(0, tomorrow.timeIntervalSince(now))
         let hours = Int(interval) / 3600
         let minutes = (Int(interval) % 3600) / 60
         let seconds = Int(interval) % 60
-        timeRemaining = String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+        return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
     }
 }

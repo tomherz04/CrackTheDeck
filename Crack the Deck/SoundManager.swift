@@ -9,10 +9,13 @@ enum GameSettings {
     }
 }
 
+/// Plays short synthesized tones. All engine work happens on a private serial queue, and each
+/// tone's buffers are rendered once and then reused, so a tap never pays for audio setup or
+/// sample synthesis on the main thread.
 final class SoundManager {
     static let shared = SoundManager()
 
-    enum Tone {
+    enum Tone: CaseIterable {
         case select
         case correct
         case wrong
@@ -36,7 +39,8 @@ final class SoundManager {
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
     private let format: AVAudioFormat
-    private var started = false
+    private let queue = DispatchQueue(label: "SoundManager", qos: .userInteractive)
+    private var buffers: [Tone: [AVAudioPCMBuffer]] = [:]
 
     private init() {
         format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1)!
@@ -44,25 +48,38 @@ final class SoundManager {
         engine.connect(player, to: engine.mainMixerNode, format: format)
     }
 
+    /// Starts the engine and renders every tone ahead of time, so the first tap doesn't hitch.
+    func warmUp() {
+        queue.async { self.prepare() }
+    }
+
     func play(_ tone: Tone) {
         guard GameSettings.soundEnabled else { return }
-        ensureStarted()
-
-        for frequency in tone.frequencies {
-            guard let buffer = makeBuffer(frequency: frequency, duration: tone.noteDuration) else { continue }
-            player.scheduleBuffer(buffer, completionHandler: nil)
-        }
-        if !player.isPlaying {
-            player.play()
+        queue.async {
+            self.prepare()
+            // Starting the player while the engine is stopped (e.g. after an audio interruption
+            // it couldn't recover from) raises an exception, so bail instead.
+            guard self.engine.isRunning else { return }
+            for buffer in self.buffers[tone] ?? [] {
+                self.player.scheduleBuffer(buffer, completionHandler: nil)
+            }
+            if !self.player.isPlaying {
+                self.player.play()
+            }
         }
     }
 
-    private func ensureStarted() {
-        guard !started else { return }
-        try? AVAudioSession.sharedInstance().setCategory(.ambient, options: [.mixWithOthers])
-        try? AVAudioSession.sharedInstance().setActive(true)
+    private func prepare() {
+        if buffers.isEmpty {
+            for tone in Tone.allCases {
+                buffers[tone] = tone.frequencies.compactMap { makeBuffer(frequency: $0, duration: tone.noteDuration) }
+            }
+        }
+        guard !engine.isRunning else { return }
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(.ambient, options: [.mixWithOthers])
+        try? session.setActive(true)
         try? engine.start()
-        started = true
     }
 
     private func makeBuffer(frequency: Double, duration: Double) -> AVAudioPCMBuffer? {

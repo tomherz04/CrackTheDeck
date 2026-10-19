@@ -1,9 +1,15 @@
 import SwiftUI
 
-struct CardView: View {
+/// Equatable so the grid can use `.equatable()`: when the parent re-renders for an unrelated
+/// change (streak, odds, result text), the cards whose inputs didn't change skip their body.
+struct CardView: View, Equatable {
     let state: CellState
     let isSelected: Bool
     let deckStyle: DeckStyle
+
+    static func == (lhs: CardView, rhs: CardView) -> Bool {
+        lhs.state == rhs.state && lhs.isSelected == rhs.isSelected && lhs.deckStyle.id == rhs.deckStyle.id
+    }
 
     @State private var displayedState: CellState
     @State private var rotation: Double = 0
@@ -46,14 +52,18 @@ struct CardView: View {
                     .padding(9)
                 cornerEmblems
             }
+            // strokeBorder keeps the whole line inside the card; a centered stroke would have its
+            // outer half clipped by the drawingGroup below.
             RoundedRectangle(cornerRadius: 12)
-                .stroke(isSelected ? Color.yellow : borderColor, lineWidth: isSelected ? 3 : borderWidth)
+                .strokeBorder(isSelected ? Color.yellow : borderColor, lineWidth: isSelected ? 3 : borderWidth)
             content
         }
         .aspectRatio(0.7, contentMode: .fit)
-        .compositingGroup()
-        .shadow(color: .black.opacity(0.2), radius: 3, y: 2)
+        // Rasterize the card's layers once so the flip/scale/shake animations below transform a
+        // flat texture instead of re-rendering every shape each frame. The shadow goes after it,
+        // since drawingGroup clips anything drawn outside the card's bounds.
         .drawingGroup()
+        .shadow(color: .black.opacity(0.2), radius: 3, y: 2)
         .scaleEffect((isSelected ? 1.05 : 1.0) * pulseScale)
         .offset(x: shakeOffset)
         .rotation3DEffect(.degrees(rotation), axis: (x: 0, y: 1, z: 0))

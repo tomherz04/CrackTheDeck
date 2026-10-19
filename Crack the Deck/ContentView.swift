@@ -45,11 +45,13 @@ struct ContentView: View {
                     } else {
                         LazyVGrid(columns: columns, spacing: 12) {
                             let bestPile = bestMovePileIndex
+                            let deckStyle = game.selectedDeckStyle
                             ForEach(0..<9, id: \.self) { i in
                                 Button {
                                     withAnimation(.easeInOut(duration: 0.15)) { game.selectCell(i) }
                                 } label: {
-                                    CardView(state: game.grid[i], isSelected: game.selectedIndex == i, deckStyle: game.selectedDeckStyle)
+                                    CardView(state: game.grid[i], isSelected: game.selectedIndex == i, deckStyle: deckStyle)
+                                        .equatable()
                                         .overlay(alignment: .topTrailing) {
                                             if bestPile == i {
                                                 BestMoveBadge()
@@ -157,6 +159,9 @@ struct ContentView: View {
         }
         .preferredColorScheme(.dark)
         .onAppear {
+            if GameSettings.soundEnabled {
+                SoundManager.shared.warmUp()
+            }
             if !hasSeenInstructions {
                 showInstructions = true
             }
@@ -176,20 +181,18 @@ struct ContentView: View {
         else { return nil }
 
         let total = Double(game.deck.count)
-        let lowerCount = game.deck.filter { $0.rank < card.rank }.count
-        let sameCount = game.deck.filter { $0.rank == card.rank }.count
-        let higherCount = game.deck.filter { $0.rank > card.rank }.count
+        let counts = game.remainingCounts(relativeTo: card.rank)
 
         return (
-            Int((Double(lowerCount) / total * 100).rounded()),
-            Int((Double(sameCount) / total * 100).rounded()),
-            Int((Double(higherCount) / total * 100).rounded())
+            Int((Double(counts.lower) / total * 100).rounded()),
+            Int((Double(counts.same) / total * 100).rounded()),
+            Int((Double(counts.higher) / total * 100).rounded())
         )
     }
 
     /// The single best-odds guess direction for the currently selected pile, used to highlight the matching button.
-    private var bestDirection: GuessDirection? {
-        guard let odds = oddsBreakdown else { return nil }
+    private func bestDirection(for odds: (lower: Int, same: Int, higher: Int)?) -> GuessDirection? {
+        guard let odds else { return nil }
         let best = max(odds.lower, odds.same, odds.higher)
         if odds.lower == best { return .lower }
         if odds.same == best { return .same }
@@ -200,18 +203,17 @@ struct ContentView: View {
     private var bestMovePileIndex: Int? {
         guard showOdds, !game.deck.isEmpty else { return nil }
 
-        let total = Double(game.deck.count)
+        // Every pile shares the same denominator (cards left), so comparing raw counts is
+        // equivalent to comparing probabilities.
         var bestIndex: Int?
-        var bestProbability = -1.0
+        var bestCount = -1
 
         for i in 0..<9 {
             guard case .faceUp(let card) = game.grid[i] else { continue }
-            let lower = Double(game.deck.filter { $0.rank < card.rank }.count) / total
-            let same = Double(game.deck.filter { $0.rank == card.rank }.count) / total
-            let higher = Double(game.deck.filter { $0.rank > card.rank }.count) / total
-            let best = max(lower, same, higher)
-            if best > bestProbability {
-                bestProbability = best
+            let counts = game.remainingCounts(relativeTo: card.rank)
+            let best = max(counts.lower, counts.same, counts.higher)
+            if best > bestCount {
+                bestCount = best
                 bestIndex = i
             }
         }
@@ -355,18 +357,21 @@ struct ContentView: View {
     }
 
     private var guessButtons: some View {
-        HStack(spacing: 14) {
-            guessButton(title: "Lower", oddsPercent: oddsBreakdown?.lower, systemImage: "arrow.down", color: .blue, compact: false, isBestMove: bestDirection == .lower) {
+        let odds = oddsBreakdown
+        let best = bestDirection(for: odds)
+
+        return HStack(spacing: 14) {
+            guessButton(title: "Lower", oddsPercent: odds?.lower, systemImage: "arrow.down", color: .blue, compact: false, isBestMove: best == .lower) {
                 game.guess(.lower, oddsVisible: showOdds)
             }
             .frame(maxWidth: .infinity)
 
-            guessButton(title: "Same", oddsPercent: oddsBreakdown?.same, systemImage: "equal", color: .purple, compact: true, isBestMove: bestDirection == .same) {
+            guessButton(title: "Same", oddsPercent: odds?.same, systemImage: "equal", color: .purple, compact: true, isBestMove: best == .same) {
                 game.guess(.same, oddsVisible: showOdds)
             }
             .frame(width: 92)
 
-            guessButton(title: "Higher", oddsPercent: oddsBreakdown?.higher, systemImage: "arrow.up", color: .orange, compact: false, isBestMove: bestDirection == .higher) {
+            guessButton(title: "Higher", oddsPercent: odds?.higher, systemImage: "arrow.up", color: .orange, compact: false, isBestMove: best == .higher) {
                 game.guess(.higher, oddsVisible: showOdds)
             }
             .frame(maxWidth: .infinity)
@@ -465,13 +470,20 @@ private struct FireBackgroundView: View {
     @State private var rotate = false
 
     var body: some View {
-        AngularGradient(
-            colors: [.red, .orange, .yellow, .orange, .red, .purple, .red],
-            center: .center
-        )
+        GeometryReader { geo in
+            // A square as wide as the screen's diagonal still covers every corner at any angle;
+            // rotating a screen-sized rectangle would expose the corners mid-spin.
+            let side = hypot(geo.size.width, geo.size.height)
+            AngularGradient(
+                colors: [.red, .orange, .yellow, .orange, .red, .purple, .red],
+                center: .center
+            )
+            .frame(width: side, height: side)
+            .rotationEffect(.degrees(rotate ? 360 : 0))
+            .animation(.linear(duration: 4).repeatForever(autoreverses: false), value: rotate)
+            .position(x: geo.size.width / 2, y: geo.size.height / 2)
+        }
         .opacity(0.55)
-        .rotationEffect(.degrees(rotate ? 360 : 0))
-        .animation(.linear(duration: 4).repeatForever(autoreverses: false), value: rotate)
         .blendMode(.plusLighter)
         .onAppear { rotate = true }
     }

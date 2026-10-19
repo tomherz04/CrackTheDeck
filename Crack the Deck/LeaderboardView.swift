@@ -58,7 +58,7 @@ struct LeaderboardView: View {
                             achievementsGrid
                                 .padding(.vertical)
                         }
-                    } else if sortedEntries.isEmpty {
+                    } else if entries.isEmpty {
                         Spacer()
                         Text("No decks beaten yet — go win one!")
                             .foregroundColor(.white.opacity(0.6))

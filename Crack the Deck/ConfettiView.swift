@@ -14,7 +14,9 @@ private struct ConfettiPiece: Identifiable {
 struct ConfettiView: View {
     @State private var animate = false
 
-    private let pieces: [ConfettiPiece] = (0..<70).map { _ in
+    // @State so the pieces are generated once per appearance. As a plain `let` they were rebuilt
+    // (new ids) whenever the parent re-rendered, which restarted every piece mid-fall.
+    @State private var pieces: [ConfettiPiece] = (0..<70).map { _ in
         ConfettiPiece(
             x: CGFloat.random(in: 0...1),
             delay: Double.random(in: 0...0.5),
@@ -44,6 +46,7 @@ struct ConfettiView: View {
                         )
                 }
             }
+            .drawingGroup()
         }
         .allowsHitTesting(false)
         .onAppear { animate = true }

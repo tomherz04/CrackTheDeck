@@ -83,6 +83,9 @@ struct CardBackView: View {
                 .font(.system(size: 18, weight: .bold))
                 .foregroundColor(.white.opacity(0.45))
         }
+        // Flatten the layers (blurred nebula, starfield, strokes) into one Metal pass before the
+        // animated hue filter, instead of compositing each one offscreen every frame.
+        .drawingGroup()
         .hueRotation(.degrees(style.isPrismatic ? hueRotation : 0))
         .onAppear {
             guard style.isPrismatic else { return }

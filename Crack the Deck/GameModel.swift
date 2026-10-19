@@ -168,11 +168,18 @@ func formattedDuration(_ interval: TimeInterval) -> String {
     return String(format: "%d:%02d", minutes, seconds)
 }
 
-func dailyDateString(for date: Date = Date()) -> String {
+/// Built once: creating a DateFormatter is expensive, and this runs on every render via
+/// `hasCompletedDailyToday`. The autoupdating zone/locale keep it in step with system changes.
+private let dailyDateFormatter: DateFormatter = {
     let formatter = DateFormatter()
     formatter.dateFormat = "yyyy-MM-dd"
-    formatter.timeZone = .current
-    return formatter.string(from: date)
+    formatter.locale = .autoupdatingCurrent
+    formatter.timeZone = .autoupdatingCurrent
+    return formatter
+}()
+
+func dailyDateString(for date: Date = Date()) -> String {
+    dailyDateFormatter.string(from: date)
 }
 
 struct DailyResult: Codable, Equatable {
@@ -193,25 +200,44 @@ final class GameModel: ObservableObject {
     @Published private(set) var bestStreak = 0
     @Published private(set) var totalCorrect = 0
     @Published var lastResult: String?
-    @Published private(set) var isResolving = false
     @Published private(set) var isDealing = false
-    @Published private(set) var decksBeaten = UserDefaults.standard.integer(forKey: DefaultsKey.decksBeaten)
-    @Published private(set) var gamesPlayed = UserDefaults.standard.integer(forKey: DefaultsKey.gamesPlayed)
-    @Published private(set) var runBestStreak = 0
-    @Published private(set) var leaderboard: [LeaderboardEntry] = GameModel.loadLeaderboard()
-    @Published private(set) var lifetimeBestStreak = UserDefaults.standard.integer(forKey: DefaultsKey.lifetimeBestStreak)
+    // Synced stats start empty; init() loads them once, after CloudSync has merged in iCloud's copy.
+    @Published private(set) var decksBeaten = 0
+    @Published private(set) var gamesPlayed = 0
+    @Published private(set) var leaderboard: [LeaderboardEntry] = []
+    @Published private(set) var lifetimeBestStreak = 0
     @Published var newlyUnlockedAchievement: Achievement?
     @Published var newlyUnlockedDeckStyle: DeckStyle?
     @Published private(set) var isDailyMode = false
     @Published private(set) var dailyResult: DailyResult? = GameModel.loadDailyResult()
-    @Published private(set) var selectedDeckStyleID = UserDefaults.standard.string(forKey: DefaultsKey.selectedDeckStyleID) ?? DeckStyle.classic.id
-    @Published private(set) var hasWonWithoutOdds = UserDefaults.standard.bool(forKey: DefaultsKey.hasWonWithoutOdds)
+    @Published private(set) var selectedDeckStyleID = DeckStyle.classic.id
+    @Published private(set) var hasWonWithoutOdds = false
     @Published private(set) var lastRunDuration: TimeInterval = 0
+
+    // Not @Published: no view reads these, and publishing them re-rendered the whole screen for
+    // nothing (isResolving alone caused an extra full re-render 650ms after every guess).
+    private(set) var isResolving = false
+    private(set) var runBestStreak = 0
 
     private var runStartDate: Date?
     private var usedOddsThisRun = false
 
     var deckCount: Int { deck.count }
+
+    /// How many cards left in the deck rank below, equal to, and above `rank` — the raw odds
+    /// behind a guess, counted in a single pass over the deck.
+    func remainingCounts(relativeTo rank: Int) -> (lower: Int, same: Int, higher: Int) {
+        var lower = 0
+        var same = 0
+        for card in deck {
+            if card.rank < rank {
+                lower += 1
+            } else if card.rank == rank {
+                same += 1
+            }
+        }
+        return (lower, same, deck.count - lower - same)
+    }
 
     var todayString: String { dailyDateString() }
 
